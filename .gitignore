@@ -1,0 +1,39 @@
+# Flutter
+.dart_tool/
+.packages
+build/
+*.iml
+.idea/
+.vscode/
+*.lock
+*.log
+*.tmp
+
+# Android
+android/.gradle/
+android/app/build/
+android/build/
+local.properties
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Runner.xcworkspace/xcuserdata/
+
+# Windows
+windows/out/
+windows/Runner.recipe
+
+# Web
+web/firebase-messaging-sw.js
+web/service-worker.js
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
