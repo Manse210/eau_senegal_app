@@ -30,6 +30,9 @@ windows/Runner.recipe
 web/firebase-messaging-sw.js
 web/service-worker.js
 
+# Firebase service account (sensitive)
+android/app/*firebase-adminsdk*
+
 # Environment
 .env
 .env.local

@@ -45,7 +45,7 @@ class FactureService {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('EAU SÉNÉGAL',
+            pw.Text('SEN-EAU',
                 style: pw.TextStyle(
                     fontSize: 24,
                     fontWeight: pw.FontWeight.bold,
@@ -172,7 +172,7 @@ class FactureService {
         pw.Divider(color: PdfColors.grey300),
         pw.SizedBox(height: 8),
         pw.Text(
-          'Eau Sénégal - Plateforme de distribution d\'eau minérale',
+          'sen-eau - Plateforme de distribution d\'eau minérale',
           style: pw.TextStyle(fontSize: 9, color: PdfColors.grey500),
           textAlign: pw.TextAlign.center,
         ),

@@ -9,6 +9,7 @@ class Product {
   final int stock;
   final String description;
   final String? imageUrl;
+  final String? fournisseurId;
   final Color couleurTheme;
   final IconData icon;
 
@@ -20,6 +21,7 @@ class Product {
     this.stock = 100,
     this.description = '',
     this.imageUrl,
+    this.fournisseurId,
     required this.couleurTheme,
     this.icon = Icons.water_drop_rounded,
   });
@@ -36,6 +38,7 @@ class Product {
       stock: map['stock'] as int? ?? 100,
       description: map['description'] as String? ?? '',
       imageUrl: map['image_url'] as String?,
+      fournisseurId: map['fournisseur_id'] as String?,
       couleurTheme: _parseHexColor(hexColor),
       icon: _getIconForProduct(nom),
     );

@@ -18,6 +18,14 @@ DROP POLICY IF EXISTS "Lecture publique produits" ON public.produits;
 DROP POLICY IF EXISTS "Insertion par fournisseur" ON public.produits;
 DROP POLICY IF EXISTS "Modification par fournisseur" ON public.produits;
 DROP POLICY IF EXISTS "Suppression par fournisseur" ON public.produits;
+DROP POLICY IF EXISTS "Admin full access profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admin full access boutiquier" ON public.boutiquier;
+DROP POLICY IF EXISTS "Admin full access fournisseur" ON public.fournisseur;
+DROP POLICY IF EXISTS "Admin full access livreur" ON public.livreur;
+DROP POLICY IF EXISTS "Admin full access produits" ON public.produits;
+DROP POLICY IF EXISTS "Admin full access commandes" ON public.commandes;
+DROP POLICY IF EXISTS "Admin full access commande_items" ON public.commande_items;
+DROP POLICY IF EXISTS "Admin full access tracking" ON public.tracking_livreurs;
 
 -- ==============================================================
 --  TABLE: profiles
@@ -48,6 +56,10 @@ CREATE POLICY "Insertion boutiquier" ON public.boutiquier
 -- ==============================================================
 CREATE POLICY "Lecture propre profil fournisseur" ON public.fournisseur
   FOR SELECT USING (auth.uid() = id);
+
+-- Tous les utilisateurs connectés peuvent voir les fournisseurs certifiés
+CREATE POLICY "Lecture publique fournisseur" ON public.fournisseur
+  FOR SELECT USING (auth.role() = 'authenticated');
 
 CREATE POLICY "Insertion fournisseur" ON public.fournisseur
   FOR INSERT WITH CHECK (auth.uid() = id);
@@ -183,6 +195,51 @@ CREATE POLICY "Fournisseur init tracking" ON public.tracking_livreurs
 CREATE POLICY "Fournisseur update tracking" ON public.tracking_livreurs
   FOR UPDATE USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'fournisseur')
   WITH CHECK (auth.jwt() -> 'user_metadata' ->> 'role' = 'fournisseur');
+
+-- ==============================================================
+--  POLICIES ADMIN (accès total à toutes les tables)
+-- ==============================================================
+-- L'admin voit/modifie tout sur toutes les tables
+
+-- profiles
+CREATE POLICY "Admin full access profiles" ON public.profiles
+  FOR ALL USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin')
+  WITH CHECK (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
+
+-- boutiquier
+CREATE POLICY "Admin full access boutiquier" ON public.boutiquier
+  FOR ALL USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin')
+  WITH CHECK (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
+
+-- fournisseur
+CREATE POLICY "Admin full access fournisseur" ON public.fournisseur
+  FOR ALL USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin')
+  WITH CHECK (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
+
+-- livreur
+CREATE POLICY "Admin full access livreur" ON public.livreur
+  FOR ALL USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin')
+  WITH CHECK (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
+
+-- produits
+CREATE POLICY "Admin full access produits" ON public.produits
+  FOR ALL USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin')
+  WITH CHECK (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
+
+-- commandes
+CREATE POLICY "Admin full access commandes" ON public.commandes
+  FOR ALL USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin')
+  WITH CHECK (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
+
+-- commande_items
+CREATE POLICY "Admin full access commande_items" ON public.commande_items
+  FOR ALL USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin')
+  WITH CHECK (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
+
+-- tracking_livreurs
+CREATE POLICY "Admin full access tracking" ON public.tracking_livreurs
+  FOR ALL USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin')
+  WITH CHECK (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
 
 -- ==============================================================
 --  ACTIVER REALTIME SUR commandes (en plus de tracking_livreurs)

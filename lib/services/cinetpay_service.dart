@@ -11,11 +11,10 @@ class CinetPayResult {
 }
 
 class CinetPayService {
-  // Quand tu auras un compte CinetPay, mets la clé ici
-  // et passe modeSimulation = false
-  static const bool modeSimulation = true;
-  static const String _apiKey = '';
-  static const String _siteId = '';
+  // ⚠️ Clé LIVE — Ne pas committer sans .env
+  static const bool modeSimulation = true; // TODO: false une fois le site_id renseigné
+  static final String _apiKey = const String.fromEnvironment('CINETPAY_API_KEY', defaultValue: '');
+  static const String _siteId = ''; // TODO: demande à CinetPay
 
   Future<CinetPayResult> initierPaiement({
     required String orderId,
@@ -35,9 +34,8 @@ class CinetPayService {
     }
 
     try {
-      // TODO: Appel réel à l'API CinetPay
       // final response = await http.post(
-      //   Uri.parse('https://api.cinetpay.com/v1/?method=createPayment'),
+      //   Uri.parse('https://api.cinetpay.com/v1/?method=processPayment'),
       //   body: {
       //     'apikey': _apiKey,
       //     'site_id': _siteId,
@@ -54,9 +52,10 @@ class CinetPayService {
       // );
       // if (response.statusCode == 200) {
       //   final data = jsonDecode(response.body);
-      //   return CinetPayResult(success: true, transactionId: transactionId);
+      //   if (data['status'] == 'success' || data['code'] == '00') {
+      //     return CinetPayResult(success: true, transactionId: transactionId);
+      //   }
       // }
-
       return CinetPayResult(
         success: false,
         transactionId: transactionId,
@@ -74,9 +73,8 @@ class CinetPayService {
   Future<bool> verifierStatut(String transactionId) async {
     if (modeSimulation) return true;
 
-    // TODO: Vérifier le statut via API CinetPay
     // final response = await http.post(
-    //   Uri.parse('https://api.cinetpay.com/v1/?method=getPayStatus'),
+    //   Uri.parse('https://api.cinetpay.com/v1/?method=checkPayStatus'),
     //   body: {
     //     'apikey': _apiKey,
     //     'site_id': _siteId,

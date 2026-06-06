@@ -75,6 +75,7 @@ class _LoginScreenState extends State<LoginScreen>
   late Animation<Offset> _entrySlide;
 
   late AnimationController _rippleCtrl;
+  late AnimationController _adminPulseCtrl;
 
   _RoleOption get _role => _roles[_selectedRoleIndex];
 
@@ -106,6 +107,12 @@ class _LoginScreenState extends State<LoginScreen>
       vsync: this,
       duration: const Duration(milliseconds: 350),
     );
+
+    // Subtle admin link pulse
+    _adminPulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
   }
 
   @override
@@ -115,6 +122,7 @@ class _LoginScreenState extends State<LoginScreen>
     _bgCtrl.dispose();
     _entryCtrl.dispose();
     _rippleCtrl.dispose();
+    _adminPulseCtrl.dispose();
     super.dispose();
   }
 
@@ -183,10 +191,12 @@ class _LoginScreenState extends State<LoginScreen>
       'id': uid,
       'role': _role.value,
     };
-    try {
-      await Supabase.instance.client.from(_role.value).insert(data);
-    } catch (e) {
-      debugPrint('role table insert: $e');
+    if (_role.value != 'admin') {
+      try {
+        await Supabase.instance.client.from(_role.value).insert(data);
+      } catch (e) {
+        debugPrint('role table insert: $e');
+      }
     }
     try {
       await Supabase.instance.client.from('profiles').insert(data);
@@ -301,6 +311,8 @@ class _LoginScreenState extends State<LoginScreen>
                             _buildGlassCard(),
                             const SizedBox(height: 24),
                             _buildForgotPassword(),
+                            const SizedBox(height: 16),
+                            _buildAdminLink(),
                             const SizedBox(height: 40),
                           ],
                         ),
@@ -328,32 +340,36 @@ class _LoginScreenState extends State<LoginScreen>
       (0.88, 0.55, 70.0, 0.8),
     ];
     return specs.map((s) {
-      return AnimatedBuilder(
-        animation: _bgAnim,
-        builder: (_, __) {
-          final dy = math.sin((_bgAnim.value + s.$4) * math.pi) * 18;
-          return Positioned(
-            left: size.width * s.$1,
-            top: size.height * s.$2 + dy,
-            child: Container(
-              width: s.$3,
-              height: s.$3,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    _role.color.withOpacity(0.10),
-                    _role.color.withOpacity(0.03),
-                  ],
-                ),
-                border: Border.all(
-                  color: _role.color.withOpacity(0.12),
-                  width: 1,
-                ),
+      return Positioned(
+        left: size.width * s.$1,
+        top: size.height * s.$2,
+        child: AnimatedBuilder(
+          animation: _bgAnim,
+          builder: (_, child) {
+            final dy = math.sin((_bgAnim.value + s.$4) * math.pi) * 18;
+            return Transform.translate(
+              offset: Offset(0, dy),
+              child: child,
+            );
+          },
+          child: Container(
+            width: s.$3,
+            height: s.$3,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  _role.color.withOpacity(0.10),
+                  _role.color.withOpacity(0.03),
+                ],
+              ),
+              border: Border.all(
+                color: _role.color.withOpacity(0.12),
+                width: 1,
               ),
             ),
-          );
-        },
+          ),
+        ),
       );
     }).toList();
   }
@@ -369,7 +385,7 @@ class _LoginScreenState extends State<LoginScreen>
         children: [
           // ── IMAGE LOCALE ──
           Image.asset(
-            'assets/images/im_eau.png',
+            'assets/images/im_eau.jpg',
             fit: BoxFit.cover,
           ),
 
@@ -414,7 +430,7 @@ class _LoginScreenState extends State<LoginScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Eau Sénégal',
+                  'sen-eau',
                   style: GoogleFonts.outfit(
                     fontSize: 30,
                     fontWeight: FontWeight.w800,
@@ -899,6 +915,251 @@ class _LoginScreenState extends State<LoginScreen>
           color: _role.color,
           fontWeight: FontWeight.w600,
         ),
+      ),
+    );
+  }
+
+  Widget _buildAdminLink() {
+    return AnimatedBuilder(
+      animation: _adminPulseCtrl,
+      builder: (_, __) => TextButton(
+        onPressed: _showAdminLogin,
+        style: TextButton.styleFrom(
+          overlayColor: Colors.white.withOpacity(0.05),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        child: Text(
+          'Administration',
+          style: GoogleFonts.outfit(
+            fontSize: 11,
+            color: Colors.white.withOpacity(0.18 + 0.10 * _adminPulseCtrl.value),
+            fontWeight: FontWeight.w500,
+            letterSpacing: 2,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAdminLogin() {
+    final emailCtrl = TextEditingController();
+    final passwordCtrl = TextEditingController();
+    bool obscure = true;
+    bool loading = false;
+    String? error;
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final emailFilled = emailCtrl.text.isNotEmpty;
+          final passwordFilled = passwordCtrl.text.length >= 6;
+
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A1A2E),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: const Row(
+              children: [
+                Icon(Icons.admin_panel_settings_rounded,
+                    color: Color(0xFFA855F7), size: 24),
+                SizedBox(width: 10),
+                Text('Administration',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700)),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Accès réservé aux administrateurs',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: emailCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  onChanged: (_) => setDialogState(() => error = null),
+                  decoration: InputDecoration(
+                    hintText: 'Email admin',
+                    hintStyle: const TextStyle(color: Colors.white24),
+                    prefixIcon: const Icon(Icons.email_outlined,
+                        color: Colors.white38, size: 20),
+                    suffixIcon: emailFilled
+                        ? const Icon(Icons.check_circle_rounded,
+                            color: Color(0xFF4CAF50), size: 18)
+                        : null,
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.06),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                        color: emailFilled
+                            ? const Color(0xFF4CAF50).withOpacity(0.5)
+                            : Colors.white.withOpacity(0.08),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                        color: emailFilled
+                            ? const Color(0xFF4CAF50).withOpacity(0.3)
+                            : Colors.white.withOpacity(0.08),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(
+                          color: Color(0xFFA855F7), width: 1.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                StatefulBuilder(
+                  builder: (_, setInner) => TextField(
+                    controller: passwordCtrl,
+                    obscureText: obscure,
+                    style: const TextStyle(color: Colors.white),
+                    onChanged: (_) => setDialogState(() => error = null),
+                    decoration: InputDecoration(
+                      hintText: 'Mot de passe',
+                      hintStyle: const TextStyle(color: Colors.white24),
+                      prefixIcon: const Icon(Icons.lock_outline,
+                          color: Colors.white38, size: 20),
+                      suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (passwordFilled)
+                            const Icon(Icons.check_circle_rounded,
+                                color: Color(0xFF4CAF50), size: 18),
+                          GestureDetector(
+                            onTap: () => setInner(() => obscure = !obscure),
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Icon(
+                                obscure
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                color: Colors.white38,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.06),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(
+                          color: passwordFilled
+                              ? const Color(0xFF4CAF50).withOpacity(0.5)
+                              : Colors.white.withOpacity(0.08),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(
+                          color: passwordFilled
+                              ? const Color(0xFF4CAF50).withOpacity(0.3)
+                              : Colors.white.withOpacity(0.08),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                            color: Color(0xFFA855F7), width: 1.5),
+                      ),
+                    ),
+                  ),
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE53935).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded,
+                            color: Color(0xFFEF4444), size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(error!,
+                              style: const TextStyle(
+                                  color: Color(0xFFEF4444), fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Annuler',
+                    style: TextStyle(color: Colors.white38)),
+              ),
+              ElevatedButton(
+                onPressed: loading
+                    ? null
+                    : () async {
+                        if (emailCtrl.text.isEmpty) {
+                          setDialogState(
+                              () => error = 'Veuillez entrer un email');
+                          return;
+                        }
+                        if (passwordCtrl.text.isEmpty) {
+                          setDialogState(() =>
+                              error = 'Veuillez entrer un mot de passe');
+                          return;
+                        }
+                        setDialogState(() {
+                          loading = true;
+                          error = null;
+                        });
+                        try {
+                          await Supabase.instance.client.auth
+                              .signInWithPassword(
+                            email: emailCtrl.text.trim(),
+                            password: passwordCtrl.text.trim(),
+                          );
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        } catch (e) {
+                          final msg = e.toString()
+                              .replaceAll('AuthException(message: ', '')
+                              .replaceAll(RegExp(r'[,\)].*'), '');
+                          setDialogState(() {
+                            loading = false;
+                            error = msg;
+                          });
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF7C3AED),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: loading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
+                    : const Text('Connexion'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

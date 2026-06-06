@@ -1,17 +1,30 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'main_map_screen.dart';
 import 'login_screen.dart';
 import 'supplier_screen.dart';
 import 'theme/app_theme.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(
-    url: 'https://ltlbpxxdkryfhgrynoey.supabase.co',
-    anonKey: 'sb_publishable_5bwjhOGLRTEr-7vYBkXJsg_xgr-S4pq',
-  );
+  try {
+    await Supabase.initialize(
+      url: 'https://ltlbpxxdkryfhgrynoey.supabase.co',
+      anonKey: 'sb_publishable_5bwjhOGLRTEr-7vYBkXJsg_xgr-S4pq',
+    );
+  } catch (e) {
+    debugPrint('🚨 SUPABASE INIT ERROR: $e');
+  }
+
+  try {
+    await Firebase.initializeApp();
+    await NotificationService.init();
+  } catch (e) {
+    debugPrint('🚨 FIREBASE INIT ERROR: $e');
+  }
 
   runApp(const MyApp());
 }
@@ -22,7 +35,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Eau Sénégal',
+      title: 'sen-eau',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const AuthGate(),

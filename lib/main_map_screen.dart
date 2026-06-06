@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'catalog_screen.dart';
 import 'history_screen.dart';
+import 'admin_screen.dart';
 import 'theme/app_theme.dart';
 import 'models/order_status.dart';
 
@@ -30,6 +32,7 @@ class _MainMapScreenState extends State<MainMapScreen>
   Timer? _timerSimulation;
   StreamSubscription<Position>? _positionStreamSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _orderStatusSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _trackingSubscription;
   Timer? _timerNotifications;
   Map<String, String> _previousStatuses = {};
   List<Map<String, dynamic>> _realNotifications = [];
@@ -228,8 +231,9 @@ void initState() {
     }
 
     // 2. Écouter le tracking de ce livreur
+    _trackingSubscription?.cancel();
     if (livreurIdASuivre != null) {
-      _supabase
+      _trackingSubscription = _supabase
           .from('tracking_livreurs')
           .stream(primaryKey: ['id'])
           .eq('livreur_id', livreurIdASuivre)
@@ -312,6 +316,7 @@ void initState() {
     _timerSimulation?.cancel();
     _positionStreamSubscription?.cancel();
     _orderStatusSubscription?.cancel();
+    _trackingSubscription?.cancel();
     _timerNotifications?.cancel();
     _mapController.dispose();
     _pulseController.dispose();
@@ -343,7 +348,7 @@ void initState() {
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(24),
         decoration: const BoxDecoration(
-          color: AppColors.surface,
+          color: Color(0xFF0D2137),
           borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
         child: Column(
@@ -353,11 +358,11 @@ void initState() {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Notifications', style: AppText.subheading),
+                Text('Notifications', style: AppText.subheading.copyWith(color: Colors.white)),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('${_realNotifications.length}', style: AppText.caption),
+                    Text('${_realNotifications.length}', style: AppText.caption.copyWith(color: Colors.white54)),
                     const SizedBox(width: 8),
                     IconButton(
                       onPressed: () => Navigator.pop(ctx),
@@ -432,7 +437,7 @@ void initState() {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: AppDecorations.iconBg(themeColor.withValues(alpha: 0.1)),
+             decoration: AppDecorations.iconBg(themeColor.withValues(alpha: 0.15)),
             child: Icon(icon, color: themeColor, size: 20),
           ),
           const SizedBox(width: 14),
@@ -440,12 +445,12 @@ void initState() {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
-                Text(subtitle, style: AppText.caption, maxLines: 2, overflow: TextOverflow.ellipsis),
+                Text(title, style: AppText.body.copyWith(fontWeight: FontWeight.w700, color: Colors.white)),
+                Text(subtitle, style: AppText.caption.copyWith(color: Colors.white54), maxLines: 2, overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
-          Text(time, style: AppText.caption.copyWith(fontSize: 10)),
+          Text(time, style: AppText.caption.copyWith(fontSize: 10, color: Colors.white38)),
         ],
       ),
     );
@@ -456,7 +461,7 @@ void initState() {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFF0B1A2E),
       body: _buildScreen(),
       floatingActionButton:
           (_currentTab == 0 && _userRole == 'livreur') ? _buildFab() : null,
@@ -467,7 +472,6 @@ void initState() {
   Widget _buildScreen() {
     if (_chargement) return _buildLoader();
     
-    // Définition des index pour un boutiquier
     if (_userRole == 'boutiquier') {
       switch (_currentTab) {
         case 0: return _buildMapBody();
@@ -475,9 +479,13 @@ void initState() {
         case 2: return const HistoryScreen(role: 'boutiquier');
         case 3: return _buildProfileScreen();
       }
-    } 
-    // Pour livreur/fournisseur : 0:Carte, 1:Historique, 2:Profil
-    else {
+    } else if (_userRole == 'admin') {
+      switch (_currentTab) {
+        case 0: return _buildMapBody();
+        case 1: return const AdminScreen();
+        case 2: return _buildProfileScreen();
+      }
+    } else {
       switch (_currentTab) {
         case 0: return _buildMapBody();
         case 1: return HistoryScreen(role: _userRole);
@@ -503,7 +511,7 @@ void initState() {
                 children: [
                   TileLayer(
                     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.example.eau_senegal_app',
+                    userAgentPackageName: 'com.example.sen_eau',
                   ),
                   if (_isDeliveryActive)
                     PolylineLayer<Object>(
@@ -580,11 +588,22 @@ void initState() {
       child: BottomNavigationBar(
         currentIndex: _currentTab,
         onTap: (index) => setState(() => _currentTab = index),
+        backgroundColor: const Color(0xFF0D2137),
+        selectedItemColor: AppColors.primaryLight,
+        unselectedItemColor: Colors.white38,
+        elevation: 0,
+        type: BottomNavigationBarType.fixed,
         items: _userRole == 'boutiquier' 
         ? [
           const BottomNavigationBarItem(icon: Icon(Icons.map_outlined), activeIcon: Icon(Icons.map), label: 'Carte'),
           const BottomNavigationBarItem(icon: Icon(Icons.shopping_bag_outlined), activeIcon: Icon(Icons.shopping_bag), label: 'Boutique'),
           const BottomNavigationBarItem(icon: Icon(Icons.history_outlined), activeIcon: Icon(Icons.history), label: 'Historique'),
+          const BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profil'),
+        ]
+        : _userRole == 'admin'
+        ? [
+          const BottomNavigationBarItem(icon: Icon(Icons.map_outlined), activeIcon: Icon(Icons.map), label: 'Carte'),
+          const BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), activeIcon: Icon(Icons.dashboard), label: 'Admin'),
           const BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profil'),
         ]
         : [
@@ -612,38 +631,158 @@ void initState() {
 
   Widget _buildProfileScreen() {
     final user = _supabase.auth.currentUser;
+    final roleColor = _userRole == 'fournisseur'
+        ? AppColors.amber
+        : _userRole == 'livreur'
+            ? AppColors.cyan
+            : AppColors.primary;
+
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircleAvatar(
-              radius: 50,
-              backgroundColor: AppColors.primaryLight,
-              child: Icon(Icons.person, size: 50, color: Colors.white),
-            ),
-            const SizedBox(height: 16),
-            Text(user?.email ?? "Utilisateur", style: AppText.subheading),
-            const SizedBox(height: 8),
+            // Avatar avec bordure gradient
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: AppDecorations.chip(AppColors.primary),
-              child: Text(
-                _userRole?.toUpperCase() ?? "INCONNU",
-                style: AppText.label.copyWith(color: AppColors.primary),
+              width: 110,
+              height: 110,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [roleColor, roleColor.withValues(alpha: 0.3)],
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: roleColor.withValues(alpha: 0.25),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.white.withValues(alpha: 0.08),
+                child: Icon(Icons.person_rounded,
+                    size: 50, color: roleColor),
               ),
             ),
-            const SizedBox(height: 32),
+
+            const SizedBox(height: 20),
+            Text(user?.email ?? "Utilisateur", style: AppText.subheading.copyWith(color: Colors.white)),
+            const SizedBox(height: 10),
+
+            // Rôle badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    roleColor.withValues(alpha: 0.12),
+                    roleColor.withValues(alpha: 0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(50),
+                border: Border.all(
+                  color: roleColor.withValues(alpha: 0.15),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _userRole == 'fournisseur'
+                        ? Icons.inventory_2_rounded
+                        : _userRole == 'livreur'
+                            ? Icons.delivery_dining_rounded
+                            : Icons.store_rounded,
+                    size: 16,
+                    color: roleColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _userRole?.toUpperCase() ?? "INCONNU",
+                    style: GoogleFonts.poppins(
+                      color: roleColor,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 40),
+
+            // Carte d'info
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceAlt,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.info_outline_rounded,
+                            color: AppColors.primaryLight, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Text('Informations', style: AppText.subheading.copyWith(color: Colors.white)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _profileInfoRow(Icons.email_rounded, 'Email',
+                      user?.email ?? "—"),
+                  const SizedBox(height: 10),
+                  _profileInfoRow(Icons.badge_rounded, 'Statut',
+                      _userRole ?? "Inconnu"),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // Déconnexion
             SizedBox(
               width: double.infinity,
               height: 56,
-              child: ElevatedButton(
+              child: ElevatedButton.icon(
                 onPressed: () async {
                   await _supabase.auth.signOut();
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
-                child: const Text("SE DÉCONNECTER"),
+                icon: const Icon(Icons.logout_rounded, color: Colors.white),
+                label: Text(
+                  "SE DÉCONNECTER",
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.red,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                ),
               ),
             ),
           ],
@@ -652,11 +791,40 @@ void initState() {
     );
   }
 
+  Widget _profileInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 16, color: AppColors.primary),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: AppText.caption.copyWith(color: Colors.white54)),
+            Text(value,
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                )),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildMapHeader(bool isLivreur) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
       decoration: const BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.black87,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
       ),
       child: Row(
@@ -665,8 +833,8 @@ void initState() {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Eau Sénégal 💧", style: AppText.heading.copyWith(fontSize: 22)),
-              Text(isLivreur ? "Mode Livreur - En route" : "Suivi de votre livraison", style: AppText.caption),
+              Text("sen-eau 💧", style: AppText.heading.copyWith(fontSize: 22, color: Colors.white)),
+              Text(isLivreur ? "Mode Livreur - En route" : "Suivi de votre livraison", style: AppText.caption.copyWith(color: Colors.white54)),
             ],
           ),
           GestureDetector(
@@ -713,7 +881,10 @@ void initState() {
   Widget _buildInfoCard() {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.card(),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Row(
         children: [
           Container(
@@ -728,12 +899,12 @@ void initState() {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text("Livreur en approche", style: AppText.subheading.copyWith(fontSize: 16)),
-                Text("Arrivée estimée : 12 min", style: AppText.caption),
+                Text("Livreur en approche", style: AppText.subheading.copyWith(fontSize: 16, color: Colors.white)),
+                Text("Arrivée estimée : 12 min", style: AppText.caption.copyWith(color: Colors.white54)),
               ],
             ),
           ),
-          const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textLight),
+          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white38),
         ],
       ),
     );

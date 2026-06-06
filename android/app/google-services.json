@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "698487434925",
+    "project_id": "sen-eau",
+    "storage_bucket": "sen-eau.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:698487434925:android:c4daeae6371a211f95e024",
+        "android_client_info": {
+          "package_name": "com.sen_eau.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDDElnM92Tde1s4a4n9V1acT1C8x5mNgV0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

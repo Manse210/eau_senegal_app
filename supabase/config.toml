@@ -1,0 +1,6 @@
+[functions]
+enabled = true
+
+[functions.send-notification]
+enabled = true
+verify_jwt = false

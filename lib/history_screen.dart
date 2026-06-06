@@ -1,46 +1,95 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'theme/app_theme.dart';
+import 'theme/app_widgets.dart';
 import 'models/order.dart';
 import 'models/order_status.dart';
 import 'order_details_screen.dart';
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   final String? role;
   const HistoryScreen({super.key, this.role});
 
   @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _entryCtrl;
+  late Animation<double> _entryFade;
+  late Animation<Offset> _entrySlide;
+
+  @override
+  void initState() {
+    super.initState();
+    _entryCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _entryFade = CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut);
+    _entrySlide = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
+    _entryCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _entryCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final supabase = Supabase.instance.client;
-    final isLivreur = role == 'livreur';
+    final isLivreur = widget.role == 'livreur';
+    final accent =
+        isLivreur ? AppColors.cyan : AppColors.primary;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text(isLivreur ? 'Mes Livraisons 🚚' : 'Mes Commandes 📦',
-            style: AppText.subheading),
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        automaticallyImplyLeading: false, // Pas de bouton retour automatique
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          // Forcer un rafraîchissement via un rebuild si nécessaire
-          (context as Element).markNeedsBuild();
-          await Future.delayed(const Duration(milliseconds: 500));
-        },
-        color: AppColors.primary,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: isLivreur
-              ? _buildDeliveryHistory(supabase, context)
-              : _buildOrderHistory(supabase, context),
+      backgroundColor: Colors.transparent,
+      body: AppBackground(
+        accentColor: accent,
+        child: FadeTransition(
+          opacity: _entryFade,
+          child: SlideTransition(
+            position: _entrySlide,
+            child: Column(
+              children: [
+                AppHeader(
+                  icon: isLivreur
+                      ? Icons.local_shipping_rounded
+                      : Icons.receipt_long_rounded,
+                  title: isLivreur ? 'Mes Livraisons' : 'Mes Commandes',
+                  subtitle: isLivreur
+                      ? 'Suivez toutes vos livraisons assignées'
+                      : 'Consultez l\'historique de vos commandes',
+                  accentColor: accent,
+                ),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () =>
+                        Future.delayed(const Duration(milliseconds: 300)),
+                    color: accent,
+                    child: isLivreur
+                        ? _buildDeliveryHistory(supabase)
+                        : _buildOrderHistory(supabase),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildOrderHistory(SupabaseClient supabase, BuildContext context) {
+  Widget _buildOrderHistory(SupabaseClient supabase) {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: supabase
           .from('commandes')
@@ -49,73 +98,44 @@ class HistoryScreen extends StatelessWidget {
           .order('created_at', ascending: false),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Padding(
-            padding: const EdgeInsets.only(top: 80),
-            child: Center(
-              child: Text('Erreur : ${snapshot.error}', style: AppText.body),
-            ),
+          return Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.error_outline_rounded,
+                  size: 48, color: AppColors.red.withValues(alpha: 0.6)),
+              const SizedBox(height: 12),
+              Text('Erreur de chargement',
+                  style: GoogleFonts.poppins(color: Colors.white)),
+              const SizedBox(height: 4),
+              Text('${snapshot.error}',
+                  style: GoogleFonts.poppins(color: Colors.white54, fontSize: 12)),
+            ]),
           );
         }
         if (!snapshot.hasData) {
-          return const Padding(
-            padding: EdgeInsets.only(top: 80),
-            child: Center(
-              child: CircularProgressIndicator(
-                  color: AppColors.primary, strokeWidth: 3),
-            ),
+          return const Center(
+            child: CircularProgressIndicator(
+                color: Colors.white, strokeWidth: 3),
           );
         }
-        final List<Order> orders = snapshot.data!
+        final orders = snapshot.data!
             .map((row) => Order.fromMap(row))
             .toList();
 
         if (orders.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.only(top: 80),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceAlt,
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  child: const Icon(Icons.shopping_bag_outlined,
-                      size: 44, color: AppColors.textLight),
-                ),
-                const SizedBox(height: 18),
-                Text('Aucune commande effectuée', style: AppText.subheading),
-                const SizedBox(height: 8),
-                Text('Vos commandes apparaîtront ici', style: AppText.body),
-              ],
-            ),
-          );
+          return _empty(
+              Icons.shopping_bag_outlined, 'Aucune commande', 'Vos commandes apparaîtront ici');
         }
 
         return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
           itemCount: orders.length,
-          itemBuilder: (context, index) => GestureDetector(
-            onTap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => OrderDetailsScreen(order: orders[index]),
-                ),
-              );
-            },
-            child: _buildOrderCard(orders[index]),
-          ),
+          itemBuilder: (_, i) => _buildOrderCard(orders[i], i),
         );
       },
     );
   }
 
-  Widget _buildDeliveryHistory(SupabaseClient supabase, BuildContext context) {
+  Widget _buildDeliveryHistory(SupabaseClient supabase) {
     final userId = supabase.auth.currentUser!.id;
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: supabase
@@ -125,161 +145,118 @@ class HistoryScreen extends StatelessWidget {
           .order('created_at', ascending: false),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Padding(
-            padding: const EdgeInsets.only(top: 80),
-            child: Center(
-              child: Text('Erreur : ${snapshot.error}', style: AppText.body),
-            ),
+          return Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.error_outline_rounded,
+                  size: 48, color: AppColors.red.withValues(alpha: 0.6)),
+              const SizedBox(height: 12),
+              Text('Erreur de chargement',
+                  style: GoogleFonts.poppins(color: Colors.white)),
+            ]),
           );
         }
         if (!snapshot.hasData) {
-          return const Padding(
-            padding: EdgeInsets.only(top: 80),
-            child: Center(
-              child: CircularProgressIndicator(
-                  color: AppColors.primary, strokeWidth: 3),
-            ),
+          return const Center(
+            child: CircularProgressIndicator(
+                color: Colors.white, strokeWidth: 3),
           );
         }
-        final List<Order> orders = snapshot.data!
+        final orders = snapshot.data!
             .map((row) => Order.fromMap(row))
             .toList();
 
         if (orders.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.only(top: 80),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceAlt,
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  child: const Icon(Icons.local_shipping_outlined,
-                      size: 44, color: AppColors.textLight),
-                ),
-                const SizedBox(height: 18),
-                Text('Aucune livraison assignée',
-                    style: AppText.subheading),
-                const SizedBox(height: 8),
-                Text('Vos livraisons apparaîtront ici dès qu\'un fournisseur vous en assigne une.',
-                    style: AppText.body),
-              ],
-            ),
-          );
+          return _empty(
+              Icons.local_shipping_outlined, 'Aucune livraison',
+              'Vos livraisons apparaîtront ici dès qu\'un fournisseur vous en assigne une.');
         }
 
         return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
           itemCount: orders.length,
-          itemBuilder: (context, index) => GestureDetector(
-            onTap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => OrderDetailsScreen(order: orders[index]),
-                ),
-              );
-            },
-            child: _buildOrderCard(orders[index]),
-          ),
+          itemBuilder: (_, i) => _buildOrderCard(orders[i], i),
         );
       },
     );
   }
 
-  Widget _buildOrderCard(Order order) {
+  Widget _empty(IconData icon, String title, String subtitle) {
+    return Center(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+          width: 100, height: 100,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Icon(icon, size: 48, color: Colors.white38),
+        ),
+        const SizedBox(height: 20),
+        Text(title, style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Text(subtitle,
+              style: GoogleFonts.poppins(color: Colors.white54, fontSize: 13),
+              textAlign: TextAlign.center),
+        ),
+      ]),
+    );
+  }
+
+  Widget _buildOrderCard(Order order, int index) {
     final status = order.status;
-    final statusText = status.label;
-    final statusColor = status.color;
-    final statusIcon = status.icon;
-
-    final totalPrice = order.totalPrice;
-    final createdAt = order.createdAt;
     final formattedDate =
-        '${createdAt.day.toString().padLeft(2, '0')}/'
-        '${createdAt.month.toString().padLeft(2, '0')}/'
-        '${createdAt.year}';
+        '${order.createdAt.day.toString().padLeft(2, '0')}/'
+        '${order.createdAt.month.toString().padLeft(2, '0')}/'
+        '${order.createdAt.year}';
     final formattedTime =
-        '${createdAt.hour.toString().padLeft(2, '0')}:'
-        '${createdAt.minute.toString().padLeft(2, '0')}';
-
+        '${order.createdAt.hour.toString().padLeft(2, '0')}:'
+        '${order.createdAt.minute.toString().padLeft(2, '0')}';
     final shortId = '#${order.shortId.substring(0, 5)}';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(18),
-      decoration: AppDecorations.card(radius: 20),
-      child: Row(
-        children: [
-          // Icône
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(statusIcon, color: statusColor, size: 26),
-          ),
+    return GestureDetector(
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => OrderDetailsScreen(order: order))),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        ),
+        child: Row(children: [
+          AppIconBadge(icon: status.icon, color: status.color, size: 46),
           const SizedBox(width: 14),
-
-          // Détails
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  order.nom != null && order.nom!.isNotEmpty
-                      ? order.nom!
-                      : 'Commande $shortId',
-                  style: AppText.body.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 3),
-                if (order.nom != null && order.nom!.isNotEmpty)
-                  Text('$shortId · $formattedDate à $formattedTime',
-                      style: AppText.caption)
-                else
-                  Text('$formattedDate à $formattedTime',
-                      style: AppText.caption),
-                const SizedBox(height: 3),
-                Text(
-                  '${totalPrice.toStringAsFixed(0)} FCFA',
-                  style: AppText.body.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(order.nom != null && order.nom!.isNotEmpty ? order.nom! : 'Commande $shortId',
+                  style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 3),
+              Text(order.nom != null && order.nom!.isNotEmpty
+                      ? '$shortId · $formattedDate à $formattedTime'
+                      : '$formattedDate à $formattedTime',
+                  style: GoogleFonts.poppins(color: Colors.white54, fontSize: 11)),
+              const SizedBox(height: 4),
+              Text('${order.totalPrice.toStringAsFixed(0)} FCFA',
+                  style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+            ]),
           ),
-
-          // Badge statut
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              statusText,
-              style: AppText.label.copyWith(
-                color: statusColor,
-                fontWeight: FontWeight.w700,
+          AppStatusBadge(label: status.label, color: status.color),
+          if (status == OrderStatus.livree) ...[
+            const SizedBox(width: 6),
+            Container(
+              width: 28, height: 28,
+              decoration: BoxDecoration(
+                color: AppColors.amber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
               ),
+              child: const Icon(Icons.star_rounded, color: AppColors.amber, size: 16),
             ),
-          ),
-        ],
+          ],
+        ]),
       ),
     );
   }

@@ -323,16 +323,151 @@ Ce projet est un **SaaS B2B** conçu pour optimiser, fluidifier et sécuriser la
 1. ~~Notifications Boutiquier~~ ✅
 2. ~~Rapport RLS~~ ✅ (script à exécuter dans Supabase)
 3. ~~Paiement Mobile~~ ✅
-4. **Exécuter le script RLS** + `migration_paiement.sql` dans Supabase.
-5. **Facturation PDF** : Générer des reçus.
+4. ~~**Exécuter le script RLS** + `migration_paiement.sql` dans Supabase.~~ ✅
+5. ~~**Facturation PDF** : Générer des reçus.~~ ✅ (déjà implémenté)
+
+### 🆕 Rôle Administrateur
+- [x] Ajout du rôle `admin` dans l'écran de connexion
+- [x] `lib/admin_screen.dart` — Dashboard admin complet :
+  - Stats plateforme (commandes, revenus, utilisateurs)
+  - Gestion des utilisateurs par rôle (boutiquiers/fournisseurs/livreurs)
+  - Liste de toutes les commandes
+- [x] Intégration dans la navigation (onglet Admin)
+
+### 🎨 Refonte UI Globale (7 pages)
+- [x] `history_screen.dart` — Animations, header gradient, cartes améliorées
+- [x] `add_product_screen.dart` — Icônes champs, sélection couleur animée
+- [x] `supplier_screen.dart` — Filtrage par fournisseur, animations
+- [x] `catalog_screen.dart` — Animations produits, AnimatedSwitcher
+- [x] `order_details_screen.dart` — Header gradient, animations
+- [x] `main_map_screen.dart` — Profil utilisateur amélioré
+- [x] `payment_screen.dart` — Animation succès, boutons avec icônes
 
 ### 📁 Nouveaux fichiers
 - `lib/services/cinetpay_service.dart` — Service de paiement (simulation + API CinetPay prête)
 - `lib/payment_screen.dart` — UI de paiement avec sélection du moyen
 - `migration_paiement.sql` — Ajout des colonnes de paiement dans Supabase
+- `lib/admin_screen.dart` — Dashboard administration plateforme
+- `lib/theme/app_widgets.dart` — Widgets réutilisables (AppBackground, AppGlassCard, AppHeader, AppStatusBadge, AppButton...)
+- `admin_create_user.sql` — Fonction PostgreSQL pour créer des utilisateurs (admin)
+
+---
+
+## 🔧 Session du 3 Juin 2026 — Améliorations Majeures
+
+### 🔐 Sécurité & RLS
+- [x] **Exécution `setup_rls_policies.sql`** dans Supabase
+- [x] **Exécution `migration_paiement.sql`** — Colonnes `payment_method` + `payment_transaction_id`
+- [x] **Policies Admin** — `FOR ALL` sur toutes les tables pour le rôle `admin`
+
+### 👑 Rôle Administrateur
+- [x] Ajout rôle `admin` (violet, icône admin_panel_settings)
+- [x] Lien "Administration" discret en bas de login (pulse animé, dialog dédié)
+- [x] **Dashboard admin complet** (`admin_screen.dart`) :
+  - Vue d'ensemble (stats commandes, revenus, utilisateurs par rôle)
+  - Gestion utilisateurs CRUD (ajout/suppression boutiquiers, fournisseurs, livreurs)
+  - Gestion produits CRUD (ajout avec choix fournisseur + couleur, suppression)
+  - Gestion commandes (liste, changement statut, annulation)
+- [x] `admin_create_user.sql` — Fonction PostgreSQL `SECURITY DEFINER` pour créer des utilisateurs sans déconnecter l'admin
+
+### 🎨 Refonte UI Thème Sombre Vitré (style page login)
+- [x] **Widgets partagés** (`app_widgets.dart`) : `AppBackground` (fond dégradé + bulles), `AppGlassCard` (glassmorphism), `AppHeader` (gradient), `AppStatusBadge`, `AppButton`, `AppIconBadge`
+- [x] **Catalogue** — Fond sombre, cartes vitrées, texte blanc, animations
+- [x] **Admin** — Fond sombre violet, onglets, cartes sombres
+- [x] **Historique** — Fond + header gradient, cartes sombres, badges
+- [x] **Paiement** — Fond dégradé, cartes sombres, succès animé, `AnimatedContainer` sélection
+- [x] **Fournisseur** — Fond dégradé ambré, cartes sombres, filtrage commandes par fournisseur
+- [x] **Détails commande** — Fond dégradé, header sombre, section admin statut
+- [x] **Carte + Profil** (`main_map_screen.dart`) — Fond sombre, header dark, bottom nav dark, info card + notifications dark, profil amélioré
+
+### 🏷️ Renommage
+- [x] Appli renommée **sen-eau** (ex Eau Sénégal)
+- [x] Package `sen_eau` (ex `eau_senegal_app`)
+- [x] Factures PDF : `SEN-EAU`
+
+### 🔧 Corrections & Optimisations
+- [x] **Fournisseur filtré** — Ne voit que les commandes liées à ses produits (via `commande_items`)
+- [x] **Dialogue admin** — Erreur inline, validation visuelle (check vert)
+- [x] **Login admin** — Lien pulse animé, boîte de dialogue sombre dédiée
+- [x] **Admin caché** — Retiré du sélecteur public (3 rôles visibles)
+
+---
+
+### 🚀 **Prochaines Étapes**
+1. **CinetPay réel** — Brancher API avec clés (dès que dispo)
+2. **Images produits** — Upload photo pour chaque produit
+3. **Notifications push** — Firebase Cloud Messaging pour Android
+4. **Annulation commande** — Finaliser le flux d'annulation
+5. **Dashboard stats avancé** — Graphiques CA, commandes/jour
+6. **Chat boutiquier ↔ livreur** — Messagerie pour les livraisons
+7. **Déploiement** — Build APK signé, Play Store
+
+### 🆕 Nouvelles Fonctionnalités Requises
+
+#### 8. Certification des Fournisseurs
+- [x] Ajout d'un champ `certifie` (boolean) dans la table `fournisseurs` (SQL)
+- [x] Badge "Fournisseur Officiel" visible dans le header fournisseur et sur les produits du catalogue
+- [x] Interface admin pour certifier/décertifier un fournisseur (icône verified)
+- [ ] Filtre dans le catalogue pour voir uniquement les fournisseurs certifiés
+- [ ] Processus de vérification (documents, validation admin) — optionnel v2
+
+#### 9. Évaluation des Livreurs par les Boutiquiers
+- [x] Nouvelle table `evaluations_livreurs` + RLS policies (SQL)
+- [x] Trigger automatique de mise à jour de `note_moyenne` sur `livreur`
+- [x] Popup de notation (1-5 étoiles) après livraison pour le boutiquier
+- [x] Classement "Par Sérieux" des livreurs (tri par note moyenne) dans l'assignation fournisseur
+- [x] Badge "Meilleur" sur le livreur le mieux noté dans la sélection
+- [ ] Badges "Livreur du Mois" / "Top Livreur" — v2
+- [ ] Exécuter `migration_certification_evaluation.sql` dans Supabase
 
 
+### 📁 Nouveaux fichiers (session 3 juin)
+- `lib/theme/app_widgets.dart` — Widgets réutilisables (fond, cartes, badges...)
+- `admin_create_user.sql` — Fonction création utilisateur côté serveur
 
+---
 
+## 🔧 Session du 6 Juin 2026 — Certification, CRUD Fournisseur & Notifications Push
+
+### ✅ 1. Certification — Interface Admin Plus Claire
+- [x] Bouton "Certifier"/"Certifié" avec texte + icône (vs simple icône avant)
+- [x] Tooltip au survol "Certifier ce fournisseur" / "Retirer la certification"
+- [x] Couleur ambrée pour "Certifier" (visible), cyan pour "Certifié"
+
+### ✅ 2. RLS — Lecture Publique des Fournisseurs
+- [x] Ajout policy `Lecture publique fournisseur` pour que boutiquiers/livreurs voient les fournisseurs certifiés
+- [x] Les badges "OFFICIEL" s'affichent maintenant dans le catalogue pour tous les rôles
+
+### ✅ 3. Liaison Produits ↔ Fournisseurs
+- [x] Tous les produits liés à `Fournisseur@gmail.com` via `fournisseur_id`
+- [x] Badges "OFFICIEL" activés sur tous les produits du catalogue
+
+### ✅ 4. CRUD Produits pour le Fournisseur
+- [x] Liste des produits du fournisseur dans son dashboard (entre stats et commandes)
+- [x] Bouton **Modifier ✏️** — pré-remplit le formulaire, fait un UPDATE
+- [x] Bouton **Supprimer 🗑️** — avec confirmation
+- [x] `AddProductScreen` adapté pour supporter l'édition (titre, bouton, logique changés)
+
+### ✅ 5. Correction Nom Package
+- [x] `applicationId` Android : `com.example.eau_senegal_app` → `com.sen_eau.app`
+- [x] `AndroidManifest.xml` : label `eau_senegal_app` → `sen-eau`
+- [x] `Info.plist` iOS : mis à jour
+
+### ✅ 6. Notifications Push (Firebase Cloud Messaging)
+- [x] Projet Firebase créé (`sen-eau`)
+- [x] `google-services.json` installé
+- [x] `firebase_core` + `firebase_messaging` ajoutés
+- [x] Android : plugin Google Services, permissions, service FCM configurés
+- [x] `NotificationService` — initialisation, permission, sauvegarde du token FCM
+- [x] Token FCM sauvegardé dans `profiles.fcm_token` (colonne ajoutée)
+- [x] **Edge Function `send-notification`** déployée (API FCM v1 avec compte de service)
+- [x] **Webhook** configuré : `commandes` UPDATE → déclenche la fonction
+- [ ] **🔴 PRIORITÉ PROCHAINE SESSION** : Tester les notifications push (installer l'APK, connecter un boutiquier, changer un statut)
+
+### 📁 Nouveaux fichiers (session 6 juin)
+- `lib/services/notification_service.dart` — Service de notifications push
+- `supabase/functions/send-notification/index.ts` — Edge Function FCM
+- `supabase/config.toml` — Configuration Supabase
+- `migration_fcm.sql` — Ajout colonne `fcm_token` à `profiles`
 
 
